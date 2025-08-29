@@ -1,0 +1,17 @@
+apiVersion: v2
+name: orchestrator
+description: A Helm chart for Event Orchestrator Framework
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+- name: orchestrator-team
+  email: team@orchestrator.com
+keywords:
+- kafka
+- event-streaming
+- microservices
+- spring-boot
+home: https://github.com/orchestrator/event-orchestrator-framework
+sources:
+- https://github.com/orchestrator/event-orchestrator-framework

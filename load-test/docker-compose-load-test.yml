@@ -1,0 +1,200 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9997:9997"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KAFKA_JMX_PORT: 9997
+      KAFKA_JMX_HOSTNAME: localhost
+      # Performance tuning for load testing
+      KAFKA_NUM_NETWORK_THREADS: 8
+      KAFKA_NUM_IO_THREADS: 16
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 102400
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 102400
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
+      KAFKA_LOG_RETENTION_HOURS: 1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: orchestrator_db
+      POSTGRES_USER: orchestrator_user
+      POSTGRES_PASSWORD: orchestrator_pass
+      # Performance tuning
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c max_connections=200
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: orchestrator_user
+      MONGO_INITDB_ROOT_PASSWORD: orchestrator_pass
+      MONGO_INITDB_DATABASE: orchestrator_db
+    command: >
+      mongod
+      --storageEngine wiredTiger
+      --wiredTigerCacheSizeGB 1
+      --wiredTigerCollectionBlockCompressor snappy
+      --wiredTigerIndexPrefixCompression true
+    volumes:
+      - mongodb_data:/data/db
+
+  # PostgreSQL Orchestrator
+  postgres-orchestrator:
+    build:
+      context: ..
+      dockerfile: Dockerfile.postgres
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      - kafka
+      - postgres
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orchestrator_db
+      SPRING_DATASOURCE_USERNAME: orchestrator_user
+      SPRING_DATASOURCE_PASSWORD: orchestrator_pass
+      SPRING_PROFILES_ACTIVE: postgres,load-test
+      # Performance settings
+      JAVA_OPTS: >
+        -Xms2g -Xmx4g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=50
+        -XX:+UseStringDeduplication
+        -XX:+UnlockExperimentalVMOptions
+        -XX:+UseJVMCICompiler
+      # Kafka consumer settings for load testing
+      ORCHESTRATOR_CONSUMER_CONCURRENCY: 8
+      ORCHESTRATOR_CONSUMER_MAX_POLL_RECORDS: 500
+      ORCHESTRATOR_DATABASE_BULK_SIZE: 1000
+      ORCHESTRATOR_DATABASE_STRATEGY: RELIABLE
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB Orchestrator  
+  mongo-orchestrator:
+    build:
+      context: ..
+      dockerfile: Dockerfile.mongo
+    ports:
+      - "8090:8080"
+      - "8091:8081"
+    depends_on:
+      - kafka
+      - mongodb
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_MONGODB_URI: mongodb://orchestrator_user:orchestrator_pass@mongodb:27017/orchestrator_db?authSource=admin
+      SPRING_PROFILES_ACTIVE: mongo,load-test
+      # Performance settings
+      JAVA_OPTS: >
+        -Xms2g -Xmx4g
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=50
+        -XX:+UseStringDeduplication
+      # Consumer settings optimized for MongoDB
+      ORCHESTRATOR_CONSUMER_CONCURRENCY: 6
+      ORCHESTRATOR_CONSUMER_MAX_POLL_RECORDS: 300
+      ORCHESTRATOR_DATABASE_BULK_SIZE: 500
+      ORCHESTRATOR_DATABASE_STRATEGY: RELIABLE
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-load-test.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=1h'
+
+  grafana:
+    image: grafana/grafana:9.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+
+  # Load Test Generator
+  kafka-load-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile.load-generator
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      LOAD_TEST_RECORDS: 1000000
+      LOAD_TEST_BATCH_SIZE: 1000
+      LOAD_TEST_THREADS: 10
+      LOAD_TEST_RATE_LIMIT: 10000
+    volumes:
+      - ./results:/app/results
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  grafana_data:

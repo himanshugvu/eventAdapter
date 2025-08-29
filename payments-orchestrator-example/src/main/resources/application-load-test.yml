@@ -1,0 +1,21 @@
+orchestrator:
+  consumer:
+    concurrency: 8
+    max-poll-records: 500
+    poll-timeout: PT5S
+    
+  database:
+    strategy: RELIABLE
+    bulk-size: 1000
+    
+  monitoring:
+    enable-metrics: true
+    metrics-prefix: postgres-orchestrator
+
+logging:
+  level:
+    com.orchestrator: INFO
+    org.springframework.kafka: WARN
+    org.hibernate: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

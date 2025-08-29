@@ -1,0 +1,27 @@
+FROM openjdk:21-jre-slim
+
+LABEL maintainer="orchestrator-framework"
+LABEL version="1.0.0"
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG JAR_FILE=payments-orchestrator-example/target/payments-orchestrator-example-*.jar
+COPY ${JAR_FILE} app.jar
+
+RUN addgroup --system orchestrator && \
+    adduser --system --group orchestrator
+
+USER orchestrator
+
+EXPOSE 8080 8081
+
+ENV JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

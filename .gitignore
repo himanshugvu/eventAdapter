@@ -1,0 +1,7 @@
+# Project exclude paths
+/load-test/target/
+/orchestrator-core/target/
+/orchestrator-db-mongo/target/
+/orchestrator-db-postgres/target/
+/payments-orchestrator-example/target/
+/payments-orchestrator-mongo-example/target/

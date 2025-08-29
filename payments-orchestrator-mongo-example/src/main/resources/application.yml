@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: payments-orchestrator-mongo
+  
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      enable-auto-commit: false
+      isolation-level: read_committed
+    producer:
+      acks: all
+      enable-idempotence: true
+  
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/orchestrator_db
+      auto-index-creation: true
+
+orchestrator:
+  consumer:
+    topic: payment-requests
+    group-id: payments-orchestrator-mongo-group
+    concurrency: 20  # Match number of partitions for maximum parallelism
+    max-poll-records: 100  # Increase batch size for better throughput
+    poll-timeout: PT1S  # Reduce poll timeout for lower latency
+    enable-auto-commit: false
+  
+  producer:
+    topic: processed-payments
+    acks: 1  # Change to 1 for lower latency (from 'all')
+    retries: 3  # Reduce retries for faster failure detection
+    request-timeout: PT5S  # Reduce timeout for faster processing
+    enable-idempotence: true
+    transaction-id-prefix: payments-mongo-tx-
+  
+  database:
+    strategy: LIGHTWEIGHT  # Change to LIGHTWEIGHT for maximum speed
+    stale-event-threshold: PT30M
+    max-retries: 3
+    retention-period: P14D
+    bulk-size: 200  # Increase bulk size for better MongoDB performance
+  
+  resilience:
+    initial-backoff: PT2S
+    max-backoff: PT2M
+    backoff-multiplier: 2.0
+    enable-circuit-breaker: true
+    circuit-breaker-failure-threshold: 5
+    circuit-breaker-recovery-timeout: PT1M
+  
+  monitoring:
+    enable-metrics: true
+    enable-health-checks: true
+    metrics-prefix: payments-orchestrator-mongo
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    com.orchestrator: DEBUG
+    org.springframework.kafka: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/payments-orchestrator-mongo.log

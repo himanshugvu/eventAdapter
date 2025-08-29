@@ -1,0 +1,58 @@
+spring:
+  kafka:
+    # bootstrap-servers will be auto-configured by @EmbeddedKafka
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+orchestrator:
+  consumer:
+    topic: payment-requests
+    group-id: test-payments-group
+    concurrency: 1
+    max-poll-records: 10
+    poll-timeout: PT1S
+    enable-auto-commit: false
+  
+  producer:
+    topic: processed-payments
+    acks: all
+    retries: 3
+    request-timeout: PT5S
+    enable-idempotence: false
+    transaction-id-prefix: test-tx-
+  
+  database:
+    strategy: RELIABLE
+    stale-event-threshold: PT5M
+    max-retries: 2
+    retention-period: P1D
+    bulk-size: 10
+  
+  resilience:
+    initial-backoff: PT1S
+    max-backoff: PT30S
+    backoff-multiplier: 2.0
+    enable-circuit-breaker: false
+    circuit-breaker-failure-threshold: 3
+    circuit-breaker-recovery-timeout: PT30S
+  
+  monitoring:
+    enable-metrics: true
+    enable-health-checks: true
+    metrics-prefix: test-orchestrator
+
+logging:
+  level:
+    com.orchestrator: DEBUG
+    org.springframework.kafka: WARN
+    org.springframework.boot: WARN
+    root: WARN

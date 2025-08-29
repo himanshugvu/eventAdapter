@@ -1,0 +1,109 @@
+replicaCount: 2
+
+image:
+  repository: payments-orchestrator-postgres
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+nameOverride: "payments-orchestrator-postgres"
+fullnameOverride: "payments-orchestrator-postgres"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "8080"
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: orchestrator.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+orchestrator:
+  consumer:
+    topic: "payment-requests"
+    groupId: "payments-orchestrator-postgres-group"
+    concurrency: 3
+    maxPollRecords: 50
+  
+  producer:
+    topic: "processed-payments"
+    transactionIdPrefix: "payments-postgres-tx-"
+  
+  database:
+    strategy: "RELIABLE"
+    maxRetries: 3
+    retentionPeriod: "P14D"
+  
+  monitoring:
+    metricsPrefix: "payments-orchestrator-postgres"
+
+kafka:
+  bootstrapServers: "kafka-service:9092"
+
+database:
+  url: "jdbc:postgresql://postgres-service:5432/orchestrator_db"
+  username: "orchestrator_user"
+  password: "orchestrator_pass"
+
+env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "postgres"
+
+envFrom: []
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3

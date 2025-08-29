@@ -1,0 +1,31 @@
+FROM eclipse-temurin:21-jre-alpine
+
+LABEL maintainer="orchestrator-framework"
+LABEL version="1.0.0"
+LABEL database="mongodb"
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+
+# Copy the MongoDB variant JAR file
+ARG JAR_FILE=payments-orchestrator-mongo-example/target/payments-orchestrator-mongo-example-*.jar
+COPY ${JAR_FILE} app.jar
+
+RUN addgroup -S orchestrator && \
+    adduser -S -G orchestrator orchestrator
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown orchestrator:orchestrator /app/logs
+
+USER orchestrator
+
+EXPOSE 8080 8081
+
+ENV JAVA_OPTS="-Xmx512m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+ENV SPRING_PROFILES_ACTIVE=mongo
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

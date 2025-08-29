@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(find:*)",
+      "Bash(mvn:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(./validate-build.sh)",
+      "Bash(docker-compose:*)",
+      "Bash(docker logs:*)",
+      "Bash(rm:*)",
+      "Bash(curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'postgres-orchestrator'
+    static_configs:
+      - targets: ['postgres-orchestrator:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 2s
+
+  - job_name: 'mongo-orchestrator'
+    static_configs:
+      - targets: ['mongo-orchestrator:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 2s
+    
+  - job_name: 'kafka-jmx'
+    static_configs:
+      - targets: ['kafka:9997']
+    scrape_interval: 5s
+    
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres:9187']
+    scrape_interval: 5s

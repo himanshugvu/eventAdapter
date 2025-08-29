@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orchestrator-config
+  namespace: orchestrator
+data:
+  application.yml: |
+    spring:
+      kafka:
+        bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-service:9092}
+      datasource:
+        url: ${DATABASE_URL:jdbc:postgresql://postgres-service:5432/orchestrator_db}
+        username: ${DATABASE_USER:orchestrator_user}
+        password: ${DATABASE_PASSWORD:orchestrator_pass}
+      jpa:
+        hibernate:
+          ddl-auto: validate
+        show-sql: false
+      flyway:
+        enabled: true
+        baseline-on-migrate: true
+    
+    orchestrator:
+      consumer:
+        topic: ${CONSUMER_TOPIC:payment-requests}
+        group-id: ${CONSUMER_GROUP_ID:payments-orchestrator-group}
+        concurrency: ${CONSUMER_CONCURRENCY:3}
+        max-poll-records: ${CONSUMER_MAX_POLL_RECORDS:50}
+        poll-timeout: PT10S
+        enable-auto-commit: false
+      
+      producer:
+        topic: ${PRODUCER_TOPIC:processed-payments}
+        acks: all
+        retries: 5
+        request-timeout: PT10S
+        enable-idempotence: true
+        transaction-id-prefix: ${TRANSACTION_ID_PREFIX:payments-tx-}
+      
+      database:
+        strategy: ${DATABASE_STRATEGY:RELIABLE}
+        stale-event-threshold: PT30M
+        max-retries: 3
+        retention-period: P14D
+        bulk-size: 100
+      
+      resilience:
+        initial-backoff: PT2S
+        max-backoff: PT2M
+        backoff-multiplier: 2.0
+        enable-circuit-breaker: true
+        circuit-breaker-failure-threshold: 5
+        circuit-breaker-recovery-timeout: PT1M
+      
+      monitoring:
+        enable-metrics: true
+        enable-health-checks: true
+        metrics-prefix: ${METRICS_PREFIX:payments-orchestrator}
+    
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+      endpoint:
+        health:
+          show-details: when_authorized
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+    
+    logging:
+      level:
+        com.orchestrator: ${LOG_LEVEL:INFO}
+        org.springframework.kafka: INFO
+      pattern:
+        console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

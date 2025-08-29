@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "orchestrator.fullname" . }}
+  labels:
+    {{- include "orchestrator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "orchestrator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "orchestrator.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "orchestrator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: management
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: {{ .Values.kafka.bootstrapServers | quote }}
+            - name: DATABASE_URL
+              value: {{ .Values.database.url | quote }}
+            - name: DATABASE_USER
+              value: {{ .Values.database.username | quote }}
+            - name: DATABASE_PASSWORD
+              value: {{ .Values.database.password | quote }}
+            - name: CONSUMER_TOPIC
+              value: {{ .Values.orchestrator.consumer.topic | quote }}
+            - name: CONSUMER_GROUP_ID
+              value: {{ .Values.orchestrator.consumer.groupId | quote }}
+            - name: CONSUMER_CONCURRENCY
+              value: {{ .Values.orchestrator.consumer.concurrency | quote }}
+            - name: CONSUMER_MAX_POLL_RECORDS
+              value: {{ .Values.orchestrator.consumer.maxPollRecords | quote }}
+            - name: PRODUCER_TOPIC
+              value: {{ .Values.orchestrator.producer.topic | quote }}
+            - name: TRANSACTION_ID_PREFIX
+              value: {{ .Values.orchestrator.producer.transactionIdPrefix | quote }}
+            - name: DATABASE_STRATEGY
+              value: {{ .Values.orchestrator.database.strategy | quote }}
+            - name: METRICS_PREFIX
+              value: {{ .Values.orchestrator.monitoring.metricsPrefix | quote }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

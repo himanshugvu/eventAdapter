@@ -1,0 +1,113 @@
+replicaCount: 2
+
+image:
+  repository: payments-orchestrator-mongo
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+nameOverride: "payments-orchestrator-mongo"
+fullnameOverride: "payments-orchestrator-mongo"
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/actuator/prometheus"
+  prometheus.io/port: "8080"
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: orchestrator.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+orchestrator:
+  consumer:
+    topic: "payment-requests"
+    groupId: "payments-orchestrator-mongo-group"
+    concurrency: 3
+    maxPollRecords: 50
+  
+  producer:
+    topic: "processed-payments"
+    transactionIdPrefix: "payments-mongo-tx-"
+  
+  database:
+    strategy: "RELIABLE"
+    maxRetries: 3
+    retentionPeriod: "P14D"
+  
+  monitoring:
+    metricsPrefix: "payments-orchestrator-mongo"
+
+kafka:
+  bootstrapServers: "kafka-service:9092"
+
+mongodb:
+  uri: "mongodb://mongodb-service:27017/orchestrator_db"
+  username: "orchestrator_user"
+  password: "orchestrator_pass"
+
+env:
+  - name: SPRING_PROFILES_ACTIVE
+    value: "mongo"
+  - name: SPRING_DATA_MONGODB_URI
+    value: "mongodb://$(MONGODB_USERNAME):$(MONGODB_PASSWORD)@mongodb-service:27017/orchestrator_db?authSource=admin"
+
+envFrom:
+  - secretRef:
+      name: mongodb-secret
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
