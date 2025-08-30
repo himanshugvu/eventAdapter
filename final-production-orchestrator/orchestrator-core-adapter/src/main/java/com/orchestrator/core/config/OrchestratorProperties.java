@@ -85,8 +85,8 @@ public record OrchestratorProperties(
     ) {}
     
     public enum DatabaseStrategy {
-        OUTBOX,
-        RELIABLE,
-        LIGHTWEIGHT
+        ATOMIC_OUTBOX,
+        AUDIT_PERSIST,
+        FAIL_SAFE
     }
 }

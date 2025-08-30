@@ -31,7 +31,7 @@ orchestrator:
     send-buffer-bytes: ${ORCHESTRATOR_PRODUCER_SEND_BUFFER_BYTES:131072}
     
   database:
-    strategy: ${ORCHESTRATOR_DATABASE_STRATEGY:RELIABLE}
+    strategy: ${ORCHESTRATOR_DATABASE_STRATEGY:FAIL_SAFE}
     
   metrics:
     enabled: ${ORCHESTRATOR_METRICS_ENABLED:true}

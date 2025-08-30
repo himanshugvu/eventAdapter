@@ -47,38 +47,22 @@ public class EventConsumerService {
         topics = "${orchestrator.consumer.topic}",
         containerFactory = "kafkaListenerContainerFactory"
     )
-    @Transactional
     public void consumeEvents(
-            ConsumerRecord<String, String> record,
+            List<ConsumerRecord<String, String>> records,
             Acknowledgment acknowledgment) {
         
-        Instant receivedAt = Instant.now();
-        
-        Long sendTimestampNs = extractSendTimestamp(record);
-        String messageId = extractMessageId(record);
-        String source = extractSource(record);
-        
-        logger.info("CONSUMER RECEIVED: messageId={}, source={}, topic={}, partition={}, offset={}, receivedAt={}", 
-                   messageId, source, record.topic(), record.partition(), record.offset(), receivedAt);
-        
-        if (sendTimestampNs != null && sendTimestampNs > 0) {
-            latencyTracker.recordConsumerLatency(sendTimestampNs, receivedAt);
-        }
+        Instant batchReceivedAt = Instant.now();
+        logger.info("CONSUMER BATCH: Received {} records at {}", records.size(), batchReceivedAt);
         
         try {
-            Event event = createEventWithTiming(record, sendTimestampNs, receivedAt);
-            
             switch (properties.database().strategy()) {
-                case OUTBOX -> processOutboxModeWithTiming(event);
-                case RELIABLE -> processReliableModeWithTiming(event);
-                case LIGHTWEIGHT -> processLightweightModeWithTiming(event);
+                case ATOMIC_OUTBOX -> processAtomicOutboxBatch(records, acknowledgment);
+                case AUDIT_PERSIST -> processAuditPersistBatch(records, acknowledgment);
+                case FAIL_SAFE -> processFailSafeBatch(records, acknowledgment);
             }
             
-            acknowledgment.acknowledge();
-            
         } catch (Exception e) {
-            logger.error("CONSUMER ERROR: Failed to process messageId={} from topic={}: {}", 
-                        messageId, record.topic(), e.getMessage(), e);
+            logger.error("CONSUMER BATCH ERROR: Failed to process {} records: {}", records.size(), e.getMessage(), e);
             throw e;
         }
     }
@@ -134,96 +118,111 @@ public class EventConsumerService {
         return event;
     }
     
-    private void processOutboxModeWithTiming(Event event) {
-        Instant processingStart = Instant.now();
-        
-        eventStore.bulkInsert(List.of(event));
-        
-        CompletableFuture<Void> future = transformAndPublishAsyncWithTiming(event, processingStart);
-        
-        future.whenComplete((result, throwable) -> {
-            if (throwable == null) {
-                logger.debug("Successfully processed event {} in OUTBOX mode", event.getId());
-            } else {
-                logger.error("Failed to process event {} in OUTBOX mode: {}", event.getId(), throwable.getMessage());
-            }
-        });
-    }
-    
-    private void processReliableModeWithTiming(Event event) {
-        Instant processingStart = Instant.now();
-        
+    private void processAtomicOutboxBatch(List<ConsumerRecord<String, String>> records, Acknowledgment acknowledgment) {
+        Instant receivedAt = Instant.now();
+        List<Event> events = records.stream()
+            .map(record -> createEventWithTiming(record, extractSendTimestamp(record), receivedAt))
+            .toList();
+            
         try {
-            eventStore.bulkInsert(List.of(event));
+            bulkInsertAndCommit(events, acknowledgment);
             
-            String transformedMessage = messageTransformer.transform(event.getPayload());
-            
-            Instant publishStart = Instant.now();
-            latencyTracker.recordProcessingLatency(processingStart, publishStart);
-            
-            publisherService.publishMessage(transformedMessage)
-                .thenAccept(result -> {
-                    Instant publishEnd = Instant.now();
-                    event.setProcessedAt(publishStart);
-                    event.setPublishedAt(publishEnd);
-                    event.calculateTimingMetrics();
-                    
-                    updateEventStatusWithTiming(event.getId(), EventStatus.SUCCESS, event);
-                    latencyTracker.recordPublishingLatency(publishStart, publishEnd);
-                    
-                    if (event.getTotalLatencyMs() != null) {
-                        latencyTracker.recordEndToEndLatency(event.getTotalLatencyMs(), event.getSendTimestampNs());
+            for (Event event : events) {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        String transformedMessage = messageTransformer.transform(event.getPayload());
+                        
+                        publisherService.publishMessage(transformedMessage)
+                            .thenAccept(result -> {
+                                event.setTransformedPayload(transformedMessage);
+                                eventStore.updateStatus(event.getId(), EventStatus.SUCCESS);
+                            })
+                            .exceptionally(throwable -> {
+                                eventStore.updateStatus(event.getId(), EventStatus.FAILED, throwable.getMessage());
+                                return null;
+                            });
+                            
+                    } catch (Exception e) {
+                        eventStore.updateStatus(event.getId(), EventStatus.FAILED, e.getMessage());
                     }
-                })
-                .exceptionally(throwable -> {
-                    logger.error("PRODUCER ERROR: Failed to publish event {}: {}", event.getId(), throwable.getMessage());
-                    updateEventStatusWithTiming(event.getId(), EventStatus.FAILED, event, throwable.getMessage());
-                    return null;
                 });
-                
+            }
+            
         } catch (Exception e) {
-            logger.error("Failed to process event in RELIABLE mode: {}", event.getId(), e);
-            updateEventStatusWithTiming(event.getId(), EventStatus.FAILED, event, e.getMessage());
+            logger.error("ATOMIC_OUTBOX: Failed to insert batch of {} events: {}", events.size(), e.getMessage());
+            throw e;
         }
     }
     
-    private void processLightweightModeWithTiming(Event event) {
-        Instant processingStart = Instant.now();
-        
-        try {
-            String transformedMessage = messageTransformer.transform(event.getPayload());
-            
-            Instant publishStart = Instant.now();
-            latencyTracker.recordProcessingLatency(processingStart, publishStart);
-            
-            publisherService.publishMessage(transformedMessage)
-                .thenAccept(result -> {
-                    Instant publishEnd = Instant.now();
-                    event.setProcessedAt(publishStart);
-                    event.setPublishedAt(publishEnd);
-                    event.calculateTimingMetrics();
-                    
-                    latencyTracker.recordPublishingLatency(publishStart, publishEnd);
-                    
-                    if (event.getTotalLatencyMs() != null) {
-                        latencyTracker.recordEndToEndLatency(event.getTotalLatencyMs(), event.getSendTimestampNs());
-                    }
-                })
-                .exceptionally(throwable -> {
-                    Event failedEvent = event;
-                    failedEvent.setStatus(EventStatus.FAILED);
-                    failedEvent.setErrorMessage(throwable.getMessage());
-                    eventStore.bulkInsert(List.of(failedEvent));
-                    logger.error("PRODUCER ERROR: Failed to publish event, logged to DB: {}", failedEvent.getId(), throwable);
-                    return null;
-                });
+    @Transactional(rollbackFor = Exception.class)
+    private void bulkInsertAndCommit(List<Event> events, Acknowledgment acknowledgment) {
+        eventStore.bulkInsert(events);
+        acknowledgment.acknowledge();
+    }
+    
+    private void processAuditPersistBatch(List<ConsumerRecord<String, String>> records, Acknowledgment acknowledgment) {
+        for (ConsumerRecord<String, String> record : records) {
+            try {
+                String transformedMessage = messageTransformer.transform(record.value());
                 
-        } catch (Exception e) {
-            Event failedEvent = event;
-            failedEvent.setStatus(EventStatus.FAILED);
-            failedEvent.setErrorMessage(e.getMessage());
-            eventStore.bulkInsert(List.of(failedEvent));
-            logger.error("Failed to process event in LIGHTWEIGHT mode: {}", failedEvent.getId(), e);
+                publisherService.publishMessage(transformedMessage)
+                    .thenAccept(result -> {
+                        acknowledgment.acknowledge();
+                        
+                        CompletableFuture.runAsync(() -> {
+                            Event successEvent = createEventForAuditPersist(record, transformedMessage, EventStatus.SUCCESS, null);
+                            eventStore.bulkInsert(List.of(successEvent));
+                        });
+                    })
+                    .exceptionally(throwable -> {
+                        Event failedEvent = createEventForAuditPersist(record, null, EventStatus.FAILED, throwable.getMessage());
+                        eventStore.bulkInsert(List.of(failedEvent));
+                        acknowledgment.acknowledge();
+                        return null;
+                    });
+                    
+            } catch (Exception e) {
+                Event failedEvent = createEventForAuditPersist(record, null, EventStatus.FAILED, e.getMessage());
+                eventStore.bulkInsert(List.of(failedEvent));
+                acknowledgment.acknowledge();
+            }
+        }
+    }
+    
+    private Event createEventForAuditPersist(ConsumerRecord<String, String> record, String transformedPayload, EventStatus status, String errorMessage) {
+        Event event = createEventWithTiming(record, extractSendTimestamp(record), Instant.now());
+        event.setTransformedPayload(transformedPayload);
+        event.setStatus(status);
+        event.setErrorMessage(errorMessage);
+        return event;
+    }
+    
+    private void processFailSafeBatch(List<ConsumerRecord<String, String>> records, Acknowledgment acknowledgment) {
+        acknowledgment.acknowledge();
+        
+        for (ConsumerRecord<String, String> record : records) {
+            try {
+                String transformedMessage = messageTransformer.transform(record.value());
+                
+                publisherService.publishMessage(transformedMessage)
+                    .exceptionally(throwable -> {
+                        Event failedEvent = new Event(UUID.randomUUID().toString(), record.value(), 
+                                                    record.topic() + "-" + record.partition(), record.offset());
+                        failedEvent.setStatus(EventStatus.FAILED);
+                        failedEvent.setErrorMessage(throwable.getMessage());
+                        eventStore.bulkInsert(List.of(failedEvent));
+                        logger.error("FAIL_SAFE: Logged failed event to dead letter: {}", failedEvent.getId());
+                        return null;
+                    });
+                    
+            } catch (Exception e) {
+                Event failedEvent = new Event(UUID.randomUUID().toString(), record.value(), 
+                                            record.topic() + "-" + record.partition(), record.offset());
+                failedEvent.setStatus(EventStatus.FAILED);
+                failedEvent.setErrorMessage(e.getMessage());
+                eventStore.bulkInsert(List.of(failedEvent));
+                logger.error("FAIL_SAFE: Logged processing failure to dead letter: {}", failedEvent.getId());
+            }
         }
     }
     

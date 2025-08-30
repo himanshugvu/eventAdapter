@@ -7,6 +7,7 @@ public class Event {
     
     private String id;
     private String payload;
+    private String transformedPayload;
     private String sourceTopicPartition;
     private Long offset;
     
@@ -50,6 +51,9 @@ public class Event {
     
     public String getPayload() { return payload; }
     public void setPayload(String payload) { this.payload = payload; }
+    
+    public String getTransformedPayload() { return transformedPayload; }
+    public void setTransformedPayload(String transformedPayload) { this.transformedPayload = transformedPayload; }
     
     public String getSourceTopicPartition() { return sourceTopicPartition; }
     public void setSourceTopicPartition(String sourceTopicPartition) { this.sourceTopicPartition = sourceTopicPartition; }

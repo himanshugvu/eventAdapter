@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS events (
     id VARCHAR(255) PRIMARY KEY,
     payload TEXT NOT NULL,
+    transformed_payload TEXT,
     topic_partition VARCHAR(255),
     offset_value BIGINT,
     status VARCHAR(50) NOT NULL DEFAULT 'RECEIVED',
