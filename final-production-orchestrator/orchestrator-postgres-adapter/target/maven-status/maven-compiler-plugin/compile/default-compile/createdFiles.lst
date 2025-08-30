@@ -1,0 +1,3 @@
+com\orchestrator\postgres\config\PostgresAdapterAutoConfiguration.class
+com\orchestrator\postgres\store\PostgresEventStore$1.class
+com\orchestrator\postgres\store\PostgresEventStore.class
