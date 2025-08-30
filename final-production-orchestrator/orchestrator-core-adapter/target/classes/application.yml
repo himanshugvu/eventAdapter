@@ -1,0 +1,85 @@
+orchestrator:
+  consumer:
+    topic: ${ORCHESTRATOR_CONSUMER_TOPIC:}
+    group-id: ${ORCHESTRATOR_CONSUMER_GROUP_ID:}
+    bootstrap-servers: ${ORCHESTRATOR_CONSUMER_BOOTSTRAP_SERVERS:localhost:9092}
+    concurrency: ${ORCHESTRATOR_CONSUMER_CONCURRENCY:20}
+    max-poll-records: ${ORCHESTRATOR_CONSUMER_MAX_POLL_RECORDS:1000}
+    poll-timeout: ${ORCHESTRATOR_CONSUMER_POLL_TIMEOUT:PT1S}
+    enable-auto-commit: ${ORCHESTRATOR_CONSUMER_ENABLE_AUTO_COMMIT:false}
+    heartbeat-interval: ${ORCHESTRATOR_CONSUMER_HEARTBEAT_INTERVAL:PT3S}
+    session-timeout: ${ORCHESTRATOR_CONSUMER_SESSION_TIMEOUT:PT30S}
+    fetch-min-bytes: ${ORCHESTRATOR_CONSUMER_FETCH_MIN_BYTES:1}
+    fetch-max-wait: ${ORCHESTRATOR_CONSUMER_FETCH_MAX_WAIT:PT0.5S}
+    max-partition-fetch-bytes: ${ORCHESTRATOR_CONSUMER_MAX_PARTITION_FETCH_BYTES:1048576}
+    receive-buffer-bytes: ${ORCHESTRATOR_CONSUMER_RECEIVE_BUFFER_BYTES:65536}
+    send-buffer-bytes: ${ORCHESTRATOR_CONSUMER_SEND_BUFFER_BYTES:131072}
+    
+  producer:
+    topic: ${ORCHESTRATOR_PRODUCER_TOPIC:}
+    bootstrap-servers: ${ORCHESTRATOR_PRODUCER_BOOTSTRAP_SERVERS:localhost:9092}
+    batch-size: ${ORCHESTRATOR_PRODUCER_BATCH_SIZE:65536}
+    linger-ms: ${ORCHESTRATOR_PRODUCER_LINGER_MS:10}
+    buffer-memory: ${ORCHESTRATOR_PRODUCER_BUFFER_MEMORY:67108864}
+    compression-type: ${ORCHESTRATOR_PRODUCER_COMPRESSION_TYPE:snappy}
+    retries: ${ORCHESTRATOR_PRODUCER_RETRIES:2147483647}
+    retry-backoff-ms: ${ORCHESTRATOR_PRODUCER_RETRY_BACKOFF_MS:100}
+    request-timeout-ms: ${ORCHESTRATOR_PRODUCER_REQUEST_TIMEOUT_MS:30000}
+    delivery-timeout-ms: ${ORCHESTRATOR_PRODUCER_DELIVERY_TIMEOUT_MS:120000}
+    max-request-size: ${ORCHESTRATOR_PRODUCER_MAX_REQUEST_SIZE:1048576}
+    receive-buffer-bytes: ${ORCHESTRATOR_PRODUCER_RECEIVE_BUFFER_BYTES:32768}
+    send-buffer-bytes: ${ORCHESTRATOR_PRODUCER_SEND_BUFFER_BYTES:131072}
+    
+  database:
+    strategy: ${ORCHESTRATOR_DATABASE_STRATEGY:RELIABLE}
+    
+  metrics:
+    enabled: ${ORCHESTRATOR_METRICS_ENABLED:true}
+
+spring:
+  kafka:
+    consumer:
+      auto-offset-reset: ${SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
+      isolation-level: ${SPRING_KAFKA_CONSUMER_ISOLATION_LEVEL:read_committed}
+      enable-auto-commit: false
+      max-poll-records: ${orchestrator.consumer.max-poll-records}
+      fetch-min-size: ${orchestrator.consumer.fetch-min-bytes}
+      fetch-max-wait: ${orchestrator.consumer.fetch-max-wait}
+      heartbeat-interval: ${orchestrator.consumer.heartbeat-interval}
+      session-timeout: ${orchestrator.consumer.session-timeout}
+      
+    producer:
+      acks: ${SPRING_KAFKA_PRODUCER_ACKS:all}
+      retries: ${orchestrator.producer.retries}
+      batch-size: ${orchestrator.producer.batch-size}
+      linger-ms: ${orchestrator.producer.linger-ms}
+      buffer-memory: ${orchestrator.producer.buffer-memory}
+      compression-type: ${orchestrator.producer.compression-type}
+      request-timeout-ms: ${orchestrator.producer.request-timeout-ms}
+      delivery-timeout-ms: ${orchestrator.producer.delivery-timeout-ms}
+      
+    listener:
+      ack-mode: ${SPRING_KAFKA_LISTENER_ACK_MODE:batch}
+      concurrency: ${orchestrator.consumer.concurrency}
+      poll-timeout: ${orchestrator.consumer.poll-timeout}
+      
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_INCLUDE:health,info,prometheus,metrics}
+  endpoint:
+    health:
+      show-details: ${MANAGEMENT_HEALTH_SHOW_DETAILS:when-authorized}
+  metrics:
+    export:
+      prometheus:
+        enabled: ${MANAGEMENT_METRICS_PROMETHEUS_ENABLED:true}
+
+logging:
+  level:
+    org.springframework.kafka: ${LOGGING_KAFKA_LEVEL:INFO}
+    com.orchestrator: ${LOGGING_ORCHESTRATOR_LEVEL:INFO}
+  pattern:
+    console: "${LOGGING_PATTERN_CONSOLE:%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n}"
+    file: "${LOGGING_PATTERN_FILE:%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n}"
