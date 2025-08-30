@@ -9,31 +9,31 @@
       "name": "orchestrator.consumer",
       "type": "com.orchestrator.core.config.OrchestratorProperties$ConsumerConfig",
       "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
-      "sourceMethod": "consumer()"
+      "sourceMethod": "public OrchestratorProperties.@NotNull @Valid ConsumerConfig consumer() "
     },
     {
       "name": "orchestrator.database",
       "type": "com.orchestrator.core.config.OrchestratorProperties$DatabaseConfig",
       "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
-      "sourceMethod": "database()"
+      "sourceMethod": "public OrchestratorProperties.@NotNull @Valid DatabaseConfig database() "
     },
     {
       "name": "orchestrator.monitoring",
       "type": "com.orchestrator.core.config.OrchestratorProperties$MonitoringConfig",
       "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
-      "sourceMethod": "monitoring()"
+      "sourceMethod": "public OrchestratorProperties.@Valid MonitoringConfig monitoring() "
     },
     {
       "name": "orchestrator.producer",
       "type": "com.orchestrator.core.config.OrchestratorProperties$ProducerConfig",
       "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
-      "sourceMethod": "producer()"
+      "sourceMethod": "public OrchestratorProperties.@NotNull @Valid ProducerConfig producer() "
     },
     {
       "name": "orchestrator.resilience",
       "type": "com.orchestrator.core.config.OrchestratorProperties$ResilienceConfig",
       "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
-      "sourceMethod": "resilience()"
+      "sourceMethod": "public OrchestratorProperties.@Valid ResilienceConfig resilience() "
     }
   ],
   "properties": [

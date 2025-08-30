@@ -10,6 +10,7 @@ META-INF\spring-configuration-metadata.json
 com\orchestrator\core\store\Event.class
 com\orchestrator\core\config\OrchestratorProperties$ConsumerConfig.class
 com\orchestrator\core\config\OrchestratorProperties$DatabaseConfig.class
+com\orchestrator\core\service\TransactionalEventService.class
 com\orchestrator\core\config\OrchestratorCoreAutoConfiguration.class
 com\orchestrator\core\transformer\MessageTransformer.class
 com\orchestrator\core\service\EventConsumerService.class

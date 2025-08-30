@@ -4,6 +4,7 @@ import com.orchestrator.core.controller.MetricsController;
 import com.orchestrator.core.metrics.LatencyTracker;
 import com.orchestrator.core.service.EventConsumerService;
 import com.orchestrator.core.service.EventPublisherService;
+import com.orchestrator.core.service.TransactionalEventService;
 import com.orchestrator.core.store.EventStore;
 import com.orchestrator.core.transformer.DefaultMessageTransformer;
 import com.orchestrator.core.transformer.MessageTransformer;
@@ -48,13 +49,19 @@ public class OrchestratorCoreAutoConfiguration {
     }
     
     @Bean
+    public TransactionalEventService transactionalEventService(EventStore eventStore) {
+        return new TransactionalEventService(eventStore);
+    }
+    
+    @Bean
     public EventConsumerService eventConsumerService(
             EventStore eventStore,
             EventPublisherService publisherService,
             MessageTransformer messageTransformer,
             OrchestratorProperties properties,
-            LatencyTracker latencyTracker) {
-        return new EventConsumerService(eventStore, publisherService, messageTransformer, properties, latencyTracker);
+            LatencyTracker latencyTracker,
+            TransactionalEventService transactionalEventService) {
+        return new EventConsumerService(eventStore, publisherService, messageTransformer, properties, latencyTracker, transactionalEventService);
     }
     
     @Bean

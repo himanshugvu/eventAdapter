@@ -29,18 +29,21 @@ public class EventConsumerService {
     private final MessageTransformer messageTransformer;
     private final OrchestratorProperties properties;
     private final LatencyTracker latencyTracker;
+    private final TransactionalEventService transactionalEventService;
     
     public EventConsumerService(
             EventStore eventStore,
             EventPublisherService publisherService,
             MessageTransformer messageTransformer,
             OrchestratorProperties properties,
-            LatencyTracker latencyTracker) {
+            LatencyTracker latencyTracker,
+            TransactionalEventService transactionalEventService) {
         this.eventStore = eventStore;
         this.publisherService = publisherService;
         this.messageTransformer = messageTransformer;
         this.properties = properties;
         this.latencyTracker = latencyTracker;
+        this.transactionalEventService = transactionalEventService;
     }
     
     @KafkaListener(
@@ -125,7 +128,7 @@ public class EventConsumerService {
             .toList();
             
         try {
-            bulkInsertAndCommit(events, acknowledgment);
+            transactionalEventService.bulkInsertAndCommit(events, acknowledgment);
             
             for (Event event : events) {
                 CompletableFuture.runAsync(() -> {
@@ -154,11 +157,6 @@ public class EventConsumerService {
         }
     }
     
-    @Transactional(rollbackFor = Exception.class)
-    private void bulkInsertAndCommit(List<Event> events, Acknowledgment acknowledgment) {
-        eventStore.bulkInsert(events);
-        acknowledgment.acknowledge();
-    }
     
     private void processAuditPersistBatch(List<ConsumerRecord<String, String>> records, Acknowledgment acknowledgment) {
         for (ConsumerRecord<String, String> record : records) {

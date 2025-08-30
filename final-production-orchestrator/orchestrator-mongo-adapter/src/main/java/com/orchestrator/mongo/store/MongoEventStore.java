@@ -150,13 +150,10 @@ public class MongoEventStore implements EventStore {
             Query query = new Query(
                 Criteria.where("createdAt").lt(cutoff)
             );
-            
             var result = mongoTemplate.remove(query, COLLECTION_NAME);
             int deletedCount = (int) result.getDeletedCount();
             logger.info("Cleaned up {} old events older than {}", deletedCount, retentionPeriod);
-            
             return deletedCount;
-            
         } catch (Exception e) {
             logger.error("Failed to cleanup old events", e);
             return 0;
