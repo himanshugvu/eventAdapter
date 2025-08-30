@@ -1,40 +1,43 @@
 orchestrator:
   consumer:
-    topic: ${ORCHESTRATOR_CONSUMER_TOPIC:}
-    group-id: ${ORCHESTRATOR_CONSUMER_GROUP_ID:}
-    bootstrap-servers: ${ORCHESTRATOR_CONSUMER_BOOTSTRAP_SERVERS:localhost:9092}
-    concurrency: ${ORCHESTRATOR_CONSUMER_CONCURRENCY:20}
-    max-poll-records: ${ORCHESTRATOR_CONSUMER_MAX_POLL_RECORDS:1000}
-    poll-timeout: ${ORCHESTRATOR_CONSUMER_POLL_TIMEOUT:PT1S}
-    enable-auto-commit: ${ORCHESTRATOR_CONSUMER_ENABLE_AUTO_COMMIT:false}
-    heartbeat-interval: ${ORCHESTRATOR_CONSUMER_HEARTBEAT_INTERVAL:PT3S}
-    session-timeout: ${ORCHESTRATOR_CONSUMER_SESSION_TIMEOUT:PT30S}
-    fetch-min-bytes: ${ORCHESTRATOR_CONSUMER_FETCH_MIN_BYTES:1}
-    fetch-max-wait: ${ORCHESTRATOR_CONSUMER_FETCH_MAX_WAIT:PT0.5S}
-    max-partition-fetch-bytes: ${ORCHESTRATOR_CONSUMER_MAX_PARTITION_FETCH_BYTES:1048576}
-    receive-buffer-bytes: ${ORCHESTRATOR_CONSUMER_RECEIVE_BUFFER_BYTES:65536}
-    send-buffer-bytes: ${ORCHESTRATOR_CONSUMER_SEND_BUFFER_BYTES:131072}
+    topic: ${orchestrator.consumer.topic:}
+    group-id: ${orchestrator.consumer.group.id:}
+    bootstrap-servers: ${orchestrator.consumer.bootstrap.servers:localhost:9092}
+    concurrency: ${orchestrator.consumer.concurrency:5}
+    max-poll-records: ${orchestrator.consumer.max.poll.records:100}
+    poll-timeout: ${orchestrator.consumer.poll.timeout:PT3S}
+    enable-auto-commit: ${orchestrator.consumer.enable.auto.commit:false}
+    heartbeat-interval: ${orchestrator.consumer.heartbeat.interval:PT3S}
+    session-timeout: ${orchestrator.consumer.session.timeout:PT30S}
+    fetch-min-bytes: ${orchestrator.consumer.fetch.min.bytes:1}
+    fetch-max-wait: ${orchestrator.consumer.fetch.max.wait:PT0.5S}
+    max-partition-fetch-bytes: ${orchestrator.consumer.max.partition.fetch.bytes:1048576}
+    receive-buffer-bytes: ${orchestrator.consumer.receive.buffer.bytes:65536}
+    send-buffer-bytes: ${orchestrator.consumer.send.buffer.bytes:131072}
     
   producer:
-    topic: ${ORCHESTRATOR_PRODUCER_TOPIC:}
-    bootstrap-servers: ${ORCHESTRATOR_PRODUCER_BOOTSTRAP_SERVERS:localhost:9092}
-    batch-size: ${ORCHESTRATOR_PRODUCER_BATCH_SIZE:65536}
-    linger-ms: ${ORCHESTRATOR_PRODUCER_LINGER_MS:10}
-    buffer-memory: ${ORCHESTRATOR_PRODUCER_BUFFER_MEMORY:67108864}
-    compression-type: ${ORCHESTRATOR_PRODUCER_COMPRESSION_TYPE:snappy}
-    retries: ${ORCHESTRATOR_PRODUCER_RETRIES:2147483647}
-    retry-backoff-ms: ${ORCHESTRATOR_PRODUCER_RETRY_BACKOFF_MS:100}
-    request-timeout-ms: ${ORCHESTRATOR_PRODUCER_REQUEST_TIMEOUT_MS:30000}
-    delivery-timeout-ms: ${ORCHESTRATOR_PRODUCER_DELIVERY_TIMEOUT_MS:120000}
-    max-request-size: ${ORCHESTRATOR_PRODUCER_MAX_REQUEST_SIZE:1048576}
-    receive-buffer-bytes: ${ORCHESTRATOR_PRODUCER_RECEIVE_BUFFER_BYTES:32768}
-    send-buffer-bytes: ${ORCHESTRATOR_PRODUCER_SEND_BUFFER_BYTES:131072}
+    topic: ${orchestrator.producer.topic:}
+    bootstrap-servers: ${orchestrator.producer.bootstrap.servers:localhost:9092}
+    acks: ${orchestrator.producer.acks:all}
+    retries: ${orchestrator.producer.retries:3}
+    request-timeout: ${orchestrator.producer.request.timeout:PT30S}
+    enable-idempotence: ${orchestrator.producer.enable.idempotence:false}
+    batch-size: ${orchestrator.producer.batch.size:16384}
+    linger-ms: ${orchestrator.producer.linger.ms:PT0.01S}
+    compression-type: ${orchestrator.producer.compression.type:snappy}
+    buffer-memory: ${orchestrator.producer.buffer.memory:33554432}
+    max-in-flight-requests-per-connection: ${orchestrator.producer.max.in.flight.requests.per.connection:5}
+    delivery-timeout: ${orchestrator.producer.delivery.timeout:PT2M}
     
   database:
-    strategy: ${ORCHESTRATOR_DATABASE_STRATEGY:FAIL_SAFE}
+    strategy: ${orchestrator.database.strategy:FAIL_SAFE}
+    stale-event-threshold: ${orchestrator.database.stale.event.threshold:PT30M}
+    max-retries: ${orchestrator.database.max.retries:3}
+    retention-period: ${orchestrator.database.retention.period:P7D}
+    bulk-size: ${orchestrator.database.bulk.size:100}
     
   metrics:
-    enabled: ${ORCHESTRATOR_METRICS_ENABLED:true}
+    enabled: ${orchestrator.metrics.enabled:true}
 
 spring:
   kafka:
@@ -42,27 +45,48 @@ spring:
       auto-offset-reset: ${SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET:earliest}
       isolation-level: ${SPRING_KAFKA_CONSUMER_ISOLATION_LEVEL:read_committed}
       enable-auto-commit: false
-      max-poll-records: ${orchestrator.consumer.max-poll-records}
-      fetch-min-size: ${orchestrator.consumer.fetch-min-bytes}
-      fetch-max-wait: ${orchestrator.consumer.fetch-max-wait}
-      heartbeat-interval: ${orchestrator.consumer.heartbeat-interval}
-      session-timeout: ${orchestrator.consumer.session-timeout}
+      max-poll-records: ${orchestrator.consumer.max.poll.records}
+      fetch-min-size: ${orchestrator.consumer.fetch.min.bytes}
+      fetch-max-wait: ${orchestrator.consumer.fetch.max.wait}
+      heartbeat-interval: ${orchestrator.consumer.heartbeat.interval}
+      session-timeout: ${orchestrator.consumer.session.timeout}
       
     producer:
       acks: ${SPRING_KAFKA_PRODUCER_ACKS:all}
       retries: ${orchestrator.producer.retries}
-      batch-size: ${orchestrator.producer.batch-size}
-      linger-ms: ${orchestrator.producer.linger-ms}
-      buffer-memory: ${orchestrator.producer.buffer-memory}
-      compression-type: ${orchestrator.producer.compression-type}
-      request-timeout-ms: ${orchestrator.producer.request-timeout-ms}
-      delivery-timeout-ms: ${orchestrator.producer.delivery-timeout-ms}
+      batch-size: ${orchestrator.producer.batch.size}
+      linger-ms: ${orchestrator.producer.linger.ms}
+      buffer-memory: ${orchestrator.producer.buffer.memory}
+      compression-type: ${orchestrator.producer.compression.type}
+      request-timeout-ms: ${orchestrator.producer.request.timeout}
+      delivery-timeout-ms: ${orchestrator.producer.delivery.timeout}
       
     listener:
       ack-mode: ${SPRING_KAFKA_LISTENER_ACK_MODE:batch}
       concurrency: ${orchestrator.consumer.concurrency}
-      poll-timeout: ${orchestrator.consumer.poll-timeout}
+      poll-timeout: ${orchestrator.consumer.poll.timeout}
       
+spring:
+  datasource:
+    hikari:
+      connection-pool-name: ${SPRING_DATASOURCE_HIKARI_POOL_NAME:OrchestratorPool}
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:20}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:5}
+      idle-timeout: ${SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT:300000}
+      max-lifetime: ${SPRING_DATASOURCE_HIKARI_MAX_LIFETIME:1800000}
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:30000}
+      validation-timeout: ${SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT:5000}
+      leak-detection-threshold: ${SPRING_DATASOURCE_HIKARI_LEAK_DETECTION_THRESHOLD:60000}
+      
+  data:
+    mongodb:
+      connection-pool:
+        max-size: ${SPRING_DATA_MONGODB_MAX_POOL_SIZE:20}
+        min-size: ${SPRING_DATA_MONGODB_MIN_POOL_SIZE:5}
+        max-wait-time: ${SPRING_DATA_MONGODB_MAX_WAIT_TIME:30000ms}
+        max-connection-idle-time: ${SPRING_DATA_MONGODB_MAX_IDLE_TIME:300000ms}
+        max-connection-life-time: ${SPRING_DATA_MONGODB_MAX_LIFE_TIME:1800000ms}
+
 management:
   endpoints:
     web:

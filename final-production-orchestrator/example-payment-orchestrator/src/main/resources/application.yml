@@ -7,7 +7,7 @@ orchestrator:
     topic: payment-output-topic
     bootstrap-servers: localhost:9092
   database:
-    strategy: RELIABLE
+    strategy: ATOMIC_OUTBOX
 spring:
   data:
     mongodb:
@@ -17,48 +17,3 @@ spring:
     name: payment-orchestrator
   server:
     port: 8080
-spring.kafka:
-  consumer:
-    heartbeat-interval: 3s
-    session-timeout: 45s
-    max-poll-records: 500
-    fetch-max-wait: 500ms
-    auto-offset-reset: earliest
-    enable-auto-commit: false
-    isolation-level: read_committed
-  producer:
-    retries: 2147483647
-    batch-size: 16384
-    linger-ms: 1
-    buffer-memory: 33554432
-    compression-type: snappy
-    acks: all
-    enable-idempotence: true
-    max-in-flight-requests-per-connection: 5
-logging:
-  level:
-    com.orchestrator: INFO
-    org.apache.kafka: WARN
-    org.springframework.kafka: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus,env
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-    distribution:
-      percentiles-histogram:
-        "[http.server.requests]": true
-      percentiles:
-        "[http.server.requests]": 0.5, 0.95, 0.99
-  tracing:
-    sampling:
-      probability: 1.0

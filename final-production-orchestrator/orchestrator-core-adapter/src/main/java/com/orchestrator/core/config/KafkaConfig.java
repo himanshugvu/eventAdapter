@@ -38,19 +38,29 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        configProps.put(ProducerConfig.ACKS_CONFIG, properties.producer().acks());
+        if (properties.producer().acks() != null) {
+            configProps.put(ProducerConfig.ACKS_CONFIG, properties.producer().acks());
+        }
         configProps.put(ProducerConfig.RETRIES_CONFIG, properties.producer().retries());
-        configProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, (int) properties.producer().requestTimeout().toMillis());
+        if (properties.producer().requestTimeout() != null) {
+            configProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, (int) properties.producer().requestTimeout().toMillis());
+        }
         configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, properties.producer().enableIdempotence());
         
         configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, properties.producer().batchSize());
-        configProps.put(ProducerConfig.LINGER_MS_CONFIG, properties.producer().lingerMs().toMillis());
-        configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, properties.producer().compressionType());
+        if (properties.producer().lingerMs() != null) {
+            configProps.put(ProducerConfig.LINGER_MS_CONFIG, (int) properties.producer().lingerMs().toMillis());
+        }
+        if (properties.producer().compressionType() != null) {
+            configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, properties.producer().compressionType());
+        }
         configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, properties.producer().bufferMemory());
         configProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, properties.producer().maxInFlightRequestsPerConnection());
-        configProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, (int) properties.producer().deliveryTimeout().toMillis());
+        if (properties.producer().deliveryTimeout() != null) {
+            configProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, (int) properties.producer().deliveryTimeout().toMillis());
+        }
         
-        if (properties.producer().enableIdempotence()) {
+        if (properties.producer().enableIdempotence() && properties.producer().transactionIdPrefix() != null) {
             configProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, properties.producer().transactionIdPrefix());
         }
         
@@ -81,12 +91,18 @@ public class KafkaConfig {
         configProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, properties.consumer().maxPollRecords());
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, properties.consumer().enableAutoCommit());
         configProps.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, properties.consumer().fetchMinBytes());
-        configProps.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, properties.consumer().fetchMaxWait().toMillis());
+        if (properties.consumer().fetchMaxWait() != null) {
+            configProps.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, (int) properties.consumer().fetchMaxWait().toMillis());
+        }
         configProps.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, properties.consumer().maxPartitionFetchBytes());
         configProps.put(ConsumerConfig.RECEIVE_BUFFER_CONFIG, properties.consumer().receiveBufferBytes());
         configProps.put(ConsumerConfig.SEND_BUFFER_CONFIG, properties.consumer().sendBufferBytes());
-        configProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (int) properties.consumer().sessionTimeout().toMillis());
-        configProps.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, (int) properties.consumer().heartbeatInterval().toMillis());
+        if (properties.consumer().sessionTimeout() != null) {
+            configProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, (int) properties.consumer().sessionTimeout().toMillis());
+        }
+        if (properties.consumer().heartbeatInterval() != null) {
+            configProps.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, (int) properties.consumer().heartbeatInterval().toMillis());
+        }
         
         return new DefaultKafkaConsumerFactory<>(configProps);
     }
@@ -96,8 +112,11 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(properties.consumer().concurrency());
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
-        factory.getContainerProperties().setPollTimeout(properties.consumer().pollTimeout().toMillis());
+        factory.setBatchListener(true);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        if (properties.consumer().pollTimeout() != null) {
+            factory.getContainerProperties().setPollTimeout(properties.consumer().pollTimeout().toMillis());
+        }
         
         return factory;
     }

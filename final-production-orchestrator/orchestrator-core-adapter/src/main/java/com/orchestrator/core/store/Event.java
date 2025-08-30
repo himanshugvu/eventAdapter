@@ -6,10 +6,16 @@ import java.util.Objects;
 public class Event {
     
     private String id;
-    private String payload;
+    private String sourcePayload;
     private String transformedPayload;
-    private String sourceTopicPartition;
-    private Long offset;
+    private String sourceTopic;
+    private Integer sourcePartition;
+    private Long sourceOffset;
+    private String destinationTopic;
+    private Integer destinationPartition;
+    private Long destinationOffset;
+    private Long messageSendTime;
+    private Long messageFinalSentTime;
     
     private Instant receivedAt;
     private String topicPartition;
@@ -32,13 +38,14 @@ public class Event {
     
     public Event() {}
     
-    public Event(String id, String payload, String sourceTopicPartition, Long offset) {
+    public Event(String id, String sourcePayload, String sourceTopic, Integer sourcePartition, Long sourceOffset) {
         this.id = id;
-        this.payload = payload;
-        this.sourceTopicPartition = sourceTopicPartition;
-        this.topicPartition = sourceTopicPartition;
-        this.offset = offset;
-        this.offsetValue = offset;
+        this.sourcePayload = sourcePayload;
+        this.sourceTopic = sourceTopic;
+        this.sourcePartition = sourcePartition;
+        this.sourceOffset = sourceOffset;
+        this.topicPartition = sourceTopic + "-" + sourcePartition;
+        this.offsetValue = sourceOffset;
         this.status = EventStatus.RECEIVED;
         this.createdAt = Instant.now();
         this.receivedAt = Instant.now();
@@ -49,17 +56,41 @@ public class Event {
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
-    public String getPayload() { return payload; }
-    public void setPayload(String payload) { this.payload = payload; }
+    public String getSourcePayload() { return sourcePayload; }
+    public void setSourcePayload(String sourcePayload) { this.sourcePayload = sourcePayload; }
+    
+    public String getPayload() { return sourcePayload; }
+    public void setPayload(String payload) { this.sourcePayload = payload; }
     
     public String getTransformedPayload() { return transformedPayload; }
     public void setTransformedPayload(String transformedPayload) { this.transformedPayload = transformedPayload; }
     
-    public String getSourceTopicPartition() { return sourceTopicPartition; }
-    public void setSourceTopicPartition(String sourceTopicPartition) { this.sourceTopicPartition = sourceTopicPartition; }
+    public String getSourceTopic() { return sourceTopic; }
+    public void setSourceTopic(String sourceTopic) { this.sourceTopic = sourceTopic; }
     
-    public Long getOffset() { return offset; }
-    public void setOffset(Long offset) { this.offset = offset; }
+    public Integer getSourcePartition() { return sourcePartition; }
+    public void setSourcePartition(Integer sourcePartition) { this.sourcePartition = sourcePartition; }
+    
+    public Long getSourceOffset() { return sourceOffset; }
+    public void setSourceOffset(Long sourceOffset) { this.sourceOffset = sourceOffset; }
+    
+    public String getDestinationTopic() { return destinationTopic; }
+    public void setDestinationTopic(String destinationTopic) { this.destinationTopic = destinationTopic; }
+    
+    public Integer getDestinationPartition() { return destinationPartition; }
+    public void setDestinationPartition(Integer destinationPartition) { this.destinationPartition = destinationPartition; }
+    
+    public Long getDestinationOffset() { return destinationOffset; }
+    public void setDestinationOffset(Long destinationOffset) { this.destinationOffset = destinationOffset; }
+    
+    public Long getMessageSendTime() { return messageSendTime; }
+    public void setMessageSendTime(Long messageSendTime) { this.messageSendTime = messageSendTime; }
+    
+    public Long getMessageFinalSentTime() { return messageFinalSentTime; }
+    public void setMessageFinalSentTime(Long messageFinalSentTime) { this.messageFinalSentTime = messageFinalSentTime; }
+    
+    public Long getOffset() { return sourceOffset; }
+    public void setOffset(Long offset) { this.sourceOffset = offset; }
     
     public EventStatus getStatus() { return status; }
     public void setStatus(EventStatus status) { 

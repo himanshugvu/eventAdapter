@@ -1,10 +1,16 @@
 -- PostgreSQL Events Table Schema
 CREATE TABLE IF NOT EXISTS events (
     id VARCHAR(255) PRIMARY KEY,
-    payload TEXT NOT NULL,
+    source_payload TEXT NOT NULL,
     transformed_payload TEXT,
-    topic_partition VARCHAR(255),
-    offset_value BIGINT,
+    source_topic VARCHAR(255),
+    source_partition INTEGER,
+    source_offset BIGINT,
+    destination_topic VARCHAR(255),
+    destination_partition INTEGER,
+    destination_offset BIGINT,
+    message_send_time BIGINT,
+    message_final_sent_time BIGINT,
     status VARCHAR(50) NOT NULL DEFAULT 'RECEIVED',
     received_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMP WITH TIME ZONE,
@@ -17,7 +23,10 @@ CREATE TABLE IF NOT EXISTS events (
     consumer_latency_ms BIGINT,
     processing_latency_ms BIGINT,
     publishing_latency_ms BIGINT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    -- Legacy fields for backward compatibility
+    topic_partition VARCHAR(255),
+    offset_value BIGINT
 );
 
 -- Performance Indexes

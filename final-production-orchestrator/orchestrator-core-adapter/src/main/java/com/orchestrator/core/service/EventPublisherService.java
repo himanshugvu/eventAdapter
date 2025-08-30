@@ -5,7 +5,9 @@ import com.orchestrator.core.metrics.LatencyTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -41,14 +43,20 @@ public class EventPublisherService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000L)
     )
-    public CompletableFuture<Void> publishMessage(String message) {
+    public CompletableFuture<SendResult<String, String>> publishMessage(String message) {
         String targetTopic = properties.producer().topic();
+        long sendTimeNs = System.nanoTime();
         
         logger.debug("Publishing message to topic: {}", targetTopic);
         
-        return kafkaTemplate.send(targetTopic, message)
-            .thenApply(this::handleSuccess)
-            .exceptionally(this::handleFailure);
+        var messageWithHeaders = MessageBuilder
+            .withPayload(message)
+            .setHeader(KafkaHeaders.TOPIC, targetTopic)
+            .setHeader("message_send_time_ns", String.valueOf(sendTimeNs))
+            .setHeader("orchestrator_send_time", String.valueOf(System.currentTimeMillis()))
+            .build();
+        
+        return kafkaTemplate.send(messageWithHeaders);
     }
     
     /**
@@ -59,25 +67,21 @@ public class EventPublisherService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000L)
     )
-    public CompletableFuture<Void> publishMessage(String key, String message) {
+    public CompletableFuture<SendResult<String, String>> publishMessage(String key, String message) {
         String targetTopic = properties.producer().topic();
+        long sendTimeNs = System.nanoTime();
         
         logger.debug("Publishing message with key {} to topic: {}", key, targetTopic);
         
-        return kafkaTemplate.send(targetTopic, key, message)
-            .thenApply(this::handleSuccess)
-            .exceptionally(this::handleFailure);
+        var messageWithHeaders = MessageBuilder
+            .withPayload(message)
+            .setHeader(KafkaHeaders.TOPIC, targetTopic)
+            .setHeader(KafkaHeaders.KEY, key)
+            .setHeader("message_send_time_ns", String.valueOf(sendTimeNs))
+            .setHeader("orchestrator_send_time", String.valueOf(System.currentTimeMillis()))
+            .build();
+        
+        return kafkaTemplate.send(messageWithHeaders);
     }
     
-    private Void handleSuccess(SendResult<String, String> result) {
-        logger.debug("Message published successfully to topic: {} at offset: {}", 
-                    result.getRecordMetadata().topic(), 
-                    result.getRecordMetadata().offset());
-        return null;
-    }
-    
-    private Void handleFailure(Throwable throwable) {
-        logger.error("Failed to publish message", throwable);
-        throw new RuntimeException("Failed to publish message", throwable);
-    }
 }

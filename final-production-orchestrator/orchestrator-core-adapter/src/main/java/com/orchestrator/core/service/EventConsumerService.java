@@ -73,6 +73,12 @@ public class EventConsumerService {
     private Long extractSendTimestamp(ConsumerRecord<String, String> record) {
         try {
             if (record.headers() != null) {
+                // Check for orchestrator send time first (from producer)
+                var orchestratorSendTime = record.headers().lastHeader("orchestrator_send_time");
+                if (orchestratorSendTime != null) {
+                    return Long.parseLong(new String(orchestratorSendTime.value()));
+                }
+                // Fallback to original send timestamp
                 var timestampHeader = record.headers().lastHeader("send_timestamp_ns");
                 if (timestampHeader != null) {
                     return Long.parseLong(new String(timestampHeader.value()));
@@ -114,10 +120,10 @@ public class EventConsumerService {
     
     private Event createEventWithTiming(ConsumerRecord<String, String> record, Long sendTimestampNs, Instant receivedAt) {
         String eventId = UUID.randomUUID().toString();
-        String topicPartition = record.topic() + "-" + record.partition();
-        Event event = new Event(eventId, record.value(), topicPartition, record.offset());
+        Event event = new Event(eventId, record.value(), record.topic(), record.partition(), record.offset());
         event.setSendTimestampNs(sendTimestampNs);
         event.setReceivedAtOrchestrator(receivedAt);
+        event.setMessageSendTime(sendTimestampNs != null ? sendTimestampNs / 1_000_000 : null);
         return event;
     }
     
@@ -138,6 +144,10 @@ public class EventConsumerService {
                         publisherService.publishMessage(transformedMessage)
                             .thenAccept(result -> {
                                 event.setTransformedPayload(transformedMessage);
+                                event.setDestinationTopic(result.getRecordMetadata().topic());
+                                event.setDestinationPartition(result.getRecordMetadata().partition());
+                                event.setDestinationOffset(result.getRecordMetadata().offset());
+                                event.setMessageFinalSentTime(System.currentTimeMillis());
                                 eventStore.updateStatus(event.getId(), EventStatus.SUCCESS);
                             })
                             .exceptionally(throwable -> {
@@ -169,6 +179,10 @@ public class EventConsumerService {
                         
                         CompletableFuture.runAsync(() -> {
                             Event successEvent = createEventForAuditPersist(record, transformedMessage, EventStatus.SUCCESS, null);
+                            successEvent.setDestinationTopic(result.getRecordMetadata().topic());
+                            successEvent.setDestinationPartition(result.getRecordMetadata().partition());
+                            successEvent.setDestinationOffset(result.getRecordMetadata().offset());
+                            successEvent.setMessageFinalSentTime(System.currentTimeMillis());
                             eventStore.bulkInsert(List.of(successEvent));
                         });
                     })
@@ -205,7 +219,7 @@ public class EventConsumerService {
                 publisherService.publishMessage(transformedMessage)
                     .exceptionally(throwable -> {
                         Event failedEvent = new Event(UUID.randomUUID().toString(), record.value(), 
-                                                    record.topic() + "-" + record.partition(), record.offset());
+                                                    record.topic(), record.partition(), record.offset());
                         failedEvent.setStatus(EventStatus.FAILED);
                         failedEvent.setErrorMessage(throwable.getMessage());
                         eventStore.bulkInsert(List.of(failedEvent));
@@ -215,7 +229,7 @@ public class EventConsumerService {
                     
             } catch (Exception e) {
                 Event failedEvent = new Event(UUID.randomUUID().toString(), record.value(), 
-                                            record.topic() + "-" + record.partition(), record.offset());
+                                            record.topic(), record.partition(), record.offset());
                 failedEvent.setStatus(EventStatus.FAILED);
                 failedEvent.setErrorMessage(e.getMessage());
                 eventStore.bulkInsert(List.of(failedEvent));
