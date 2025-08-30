@@ -3,6 +3,7 @@ package com.orchestrator.postgres.store;
 import com.orchestrator.core.store.Event;
 import com.orchestrator.core.store.EventStatus;
 import com.orchestrator.core.store.EventStore;
+import static com.orchestrator.postgres.store.PostgresEventQueries.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
@@ -17,9 +18,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * PostgreSQL implementation of EventStore using JDBC for optimal performance
- */
 @Repository
 public class PostgresEventStore implements EventStore {
     
@@ -29,45 +27,8 @@ public class PostgresEventStore implements EventStore {
     
     public PostgresEventStore(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        initializeSchema();
     }
     
-    private void initializeSchema() {
-        try {
-            jdbcTemplate.execute("""
-                CREATE TABLE IF NOT EXISTS events (
-                    id VARCHAR(255) PRIMARY KEY,
-                    payload TEXT NOT NULL,
-                    topic_partition VARCHAR(255),
-                    offset_value BIGINT,
-                    status VARCHAR(50) NOT NULL DEFAULT 'RECEIVED',
-                    received_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    processed_at TIMESTAMP WITH TIME ZONE,
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    error_message TEXT,
-                    send_timestamp_ns BIGINT,
-                    received_at_orchestrator TIMESTAMP WITH TIME ZONE,
-                    published_at TIMESTAMP WITH TIME ZONE,
-                    total_latency_ms BIGINT,
-                    consumer_latency_ms BIGINT,
-                    processing_latency_ms BIGINT,
-                    publishing_latency_ms BIGINT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                )
-                """);
-            
-            // Create indexes for better performance
-            jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_events_status ON events(status)");
-            jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_events_received_at ON events(received_at)");
-            jdbcTemplate.execute("CREATE INDEX IF NOT EXISTS idx_events_total_latency ON events(total_latency_ms)");
-            
-            logger.info("PostgreSQL events table and indexes created/verified");
-            
-        } catch (Exception e) {
-            logger.error("Failed to initialize PostgreSQL schema", e);
-            throw new RuntimeException("Schema initialization failed", e);
-        }
-    }
     
     @Override
     public void bulkInsert(List<Event> events) {
@@ -76,16 +37,8 @@ public class PostgresEventStore implements EventStore {
         }
         
         try {
-            String sql = """
-                INSERT INTO events (
-                    id, payload, topic_partition, offset_value, status, received_at, 
-                    send_timestamp_ns, received_at_orchestrator, total_latency_ms,
-                    consumer_latency_ms, processing_latency_ms, publishing_latency_ms,
-                    processed_at, published_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
             
-            int[] results = jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            int[] results = jdbcTemplate.batchUpdate(BULK_INSERT_EVENT, new BatchPreparedStatementSetter() {
                 @Override
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
                     Event event = events.get(i);
@@ -165,18 +118,13 @@ public class PostgresEventStore implements EventStore {
     @Override
     public void updateStatus(String eventId, EventStatus status, String errorMessage) {
         try {
-            String sql;
-            Object[] params;
+            int rowsAffected;
             
             if (errorMessage != null) {
-                sql = "UPDATE events SET status = ?, error_message = ?, updated_at = ? WHERE id = ?";
-                params = new Object[]{status.name(), errorMessage, Timestamp.from(Instant.now()), eventId};
+                rowsAffected = jdbcTemplate.update(UPDATE_EVENT_ERROR, status.name(), errorMessage, eventId);
             } else {
-                sql = "UPDATE events SET status = ?, updated_at = ? WHERE id = ?";
-                params = new Object[]{status.name(), Timestamp.from(Instant.now()), eventId};
+                rowsAffected = jdbcTemplate.update(UPDATE_EVENT_STATUS, status.name(), eventId);
             }
-            
-            int rowsAffected = jdbcTemplate.update(sql, params);
             
             if (rowsAffected == 0) {
                 logger.warn("No event found with id {} to update status to {}", eventId, status);
@@ -275,7 +223,7 @@ public class PostgresEventStore implements EventStore {
     public long countPendingEvents() {
         try {
             return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM events WHERE status = 'RECEIVED'", Long.class);
+                COUNT_BY_STATUS, Long.class, "RECEIVED");
         } catch (Exception e) {
             logger.error("Failed to count pending events", e);
             return 0;
@@ -286,7 +234,7 @@ public class PostgresEventStore implements EventStore {
     public long countFailedEvents() {
         try {
             return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM events WHERE status = 'FAILED'", Long.class);
+                COUNT_BY_STATUS, Long.class, "FAILED");
         } catch (Exception e) {
             logger.error("Failed to count failed events", e);
             return 0;
@@ -297,7 +245,7 @@ public class PostgresEventStore implements EventStore {
     public long countProcessedEvents() {
         try {
             return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM events WHERE status = 'SUCCESS'", Long.class);
+                COUNT_BY_STATUS, Long.class, "SUCCESS");
         } catch (Exception e) {
             logger.error("Failed to count processed events", e);
             return 0;
@@ -308,7 +256,7 @@ public class PostgresEventStore implements EventStore {
     public long countSlowEvents() {
         try {
             return jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM events WHERE total_latency_ms > 1000", Long.class);
+                COUNT_SLOW_EVENTS, Long.class);
         } catch (Exception e) {
             logger.error("Failed to count slow events", e);
             return 0;
@@ -319,9 +267,9 @@ public class PostgresEventStore implements EventStore {
     public int cleanupOldEvents(Duration retentionPeriod) {
         try {
             Instant cutoff = Instant.now().minus(retentionPeriod);
-            String sql = "DELETE FROM events WHERE created_at < ?";
             
-            int deletedCount = jdbcTemplate.update(sql, Timestamp.from(cutoff));
+            String sql = String.format(DELETE_OLD_EVENTS, retentionPeriod.toDays());
+            int deletedCount = jdbcTemplate.update(sql);
             logger.info("Cleaned up {} old events older than {}", deletedCount, retentionPeriod);
             
             return deletedCount;
