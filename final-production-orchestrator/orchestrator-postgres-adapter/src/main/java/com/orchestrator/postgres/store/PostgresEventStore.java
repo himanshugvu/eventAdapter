@@ -267,13 +267,10 @@ public class PostgresEventStore implements EventStore {
     public int cleanupOldEvents(Duration retentionPeriod) {
         try {
             Instant cutoff = Instant.now().minus(retentionPeriod);
-            
             String sql = String.format(DELETE_OLD_EVENTS, retentionPeriod.toDays());
             int deletedCount = jdbcTemplate.update(sql);
             logger.info("Cleaned up {} old events older than {}", deletedCount, retentionPeriod);
-            
             return deletedCount;
-            
         } catch (Exception e) {
             logger.error("Failed to cleanup old events", e);
             return 0;
