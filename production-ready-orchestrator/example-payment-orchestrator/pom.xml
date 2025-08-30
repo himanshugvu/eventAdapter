@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.orchestrator</groupId>
+        <artifactId>production-orchestrator-framework</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>example-payment-orchestrator</artifactId>
+    <name>Example Payment Orchestrator</name>
+    <description>Example payment orchestrator demonstrating property-based DB adapter selection</description>
+
+    <properties>
+        <!-- Default database type - override with -Ddb.type=postgres -->
+        <db.type>mongo</db.type>
+    </properties>
+
+    <dependencies>
+        <!-- ONLY 2 INTERNAL JAR DEPENDENCIES AS REQUIRED -->
+        
+        <!-- Core Adapter JAR - Contains Spring Boot web framework and core business logic -->
+        <dependency>
+            <groupId>com.orchestrator</groupId>
+            <artifactId>orchestrator-core-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- DB Adapter JAR - Property-based selection: orchestrator-{db.type}-adapter -->
+        <dependency>
+            <groupId>com.orchestrator</groupId>
+            <artifactId>orchestrator-${db.type}-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- Testing Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.orchestrator.example.payment.PaymentOrchestratorApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

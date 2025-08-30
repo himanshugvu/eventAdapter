@@ -1,0 +1,97 @@
+# Final Production-Ready Payment Orchestrator Configuration
+# Demonstrates property-based database adapter selection with latest Spring Boot 3.3.5
+
+orchestrator:
+  # MANDATORY: Consumer configuration (app will fail to start without these)
+  consumer:
+    topic: payment-input-topic
+    group-id: payment-orchestrator-group
+    bootstrap-servers: localhost:9092  # Can be different from producer
+    
+  # MANDATORY: Producer configuration (app will fail to start without these)
+  producer:
+    topic: payment-output-topic
+    bootstrap-servers: localhost:9092  # Can be different from consumer
+    
+  # MANDATORY: Database configuration
+  database:
+    strategy: RELIABLE  # OUTBOX, RELIABLE, or LIGHTWEIGHT
+
+# Database Configuration - MongoDB (when built with -Ddb.type=mongo)
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/payment-orchestrator
+      database: payment-orchestrator
+  
+  # Database Configuration - PostgreSQL (when built with -Ddb.type=postgres)
+  # Uncomment when using PostgreSQL:
+  # datasource:
+  #   url: jdbc:postgresql://localhost:5432/payment_orchestrator
+  #   username: postgres
+  #   password: postgres
+  #   driver-class-name: org.postgresql.Driver
+  # jpa:
+  #   hibernate:
+  #     ddl-auto: validate
+  #   database-platform: org.hibernate.dialect.PostgreSQLDialect
+  
+  # Application Configuration
+  application:
+    name: payment-orchestrator
+    
+  # Server Configuration
+  server:
+    port: 8080
+
+# Latest Kafka Configuration Overrides (Spring Boot 3.3.5 optimized)
+spring.kafka:
+  consumer:
+    heartbeat-interval: 3s
+    session-timeout: 45s
+    max-poll-records: 500
+    fetch-max-wait: 500ms
+    auto-offset-reset: earliest
+    enable-auto-commit: false
+    isolation-level: read_committed
+  
+  producer:
+    retries: 2147483647
+    batch-size: 16384
+    linger-ms: 1
+    buffer-memory: 33554432
+    compression-type: snappy
+    acks: all
+    enable-idempotence: true
+    max-in-flight-requests-per-connection: 5
+
+# Logging Configuration
+logging:
+  level:
+    com.orchestrator: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    
+# Management and Monitoring (Spring Boot 3.3.5)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+      percentiles:
+        "[http.server.requests]": 0.5, 0.95, 0.99
+  tracing:
+    sampling:
+      probability: 1.0

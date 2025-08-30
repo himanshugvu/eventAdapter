@@ -1,0 +1,2 @@
+com\orchestrator\mongo\config\MongoAdapterAutoConfiguration.class
+com\orchestrator\mongo\store\MongoEventStore.class

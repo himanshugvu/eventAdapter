@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kafka with high-performance configuration
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_NUM_PARTITIONS: 20
+      # Performance optimizations
+      KAFKA_LOG_FLUSH_INTERVAL_MESSAGES: 10000
+      KAFKA_LOG_FLUSH_INTERVAL_MS: 1000
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: 1073741824
+      KAFKA_LOG_CLEANUP_POLICY: delete
+      # JVM settings for better performance
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: payment-orchestrator
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kafka UI for monitoring
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+  # Production-ready Payment Orchestrator (MongoDB version)
+  payment-orchestrator:
+    build:
+      context: ./payment-orch-example
+      dockerfile: Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # MANDATORY configuration - application won't start without these
+      ORCHESTRATOR_CONSUMER_TOPIC: payment-input-topic
+      ORCHESTRATOR_CONSUMER_GROUP_ID: payment-orchestrator-group
+      ORCHESTRATOR_CONSUMER_BOOTSTRAP_SERVERS: kafka:29092
+      ORCHESTRATOR_PRODUCER_TOPIC: payment-output-topic
+      ORCHESTRATOR_PRODUCER_BOOTSTRAP_SERVERS: kafka:29092
+      ORCHESTRATOR_DATABASE_STRATEGY: RELIABLE
+      
+      # MongoDB connection
+      SPRING_DATA_MONGODB_URI: mongodb://root:rootpassword@mongodb:27017/payment-orchestrator?authSource=admin
+      SPRING_DATA_MONGODB_DATABASE: payment-orchestrator
+      
+      # Performance optimization
+      SPRING_KAFKA_CONSUMER_MAX_POLL_RECORDS: 500
+      SPRING_KAFKA_CONSUMER_FETCH_MAX_WAIT: 100ms
+      SPRING_KAFKA_PRODUCER_BATCH_SIZE: 32768
+      SPRING_KAFKA_PRODUCER_LINGER_MS: 1
+      SPRING_KAFKA_PRODUCER_COMPRESSION_TYPE: snappy
+      
+      # JVM performance settings
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+      
+      # Logging
+      LOGGING_LEVEL_COM_ORCHESTRATOR: INFO
+      LOGGING_LEVEL_ORG_APACHE_KAFKA: WARN
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Load testing service (optional)
+  locust:
+    image: locustio/locust:2.17.0
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./load-test:/mnt/locust
+    command: -f /mnt/locust/locustfile.py --host=http://kafka:29092
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PRODUCER_TOPIC: payment-input-topic
+      TARGET_TPS: 1000
+
+volumes:
+  kafka-data:
+  mongodb-data:

@@ -1,0 +1,2 @@
+com\orchestrator\example\payment\PaymentOrchestratorApplication.class
+com\orchestrator\example\payment\transformer\PaymentMessageTransformer.class

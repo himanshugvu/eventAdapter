@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.orchestrator</groupId>
+        <artifactId>event-orchestrator-framework</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>inventory-orch-postgres-example</artifactId>
+    <name>Inventory Orchestrator PostgreSQL Example</name>
+    <description>Inventory orchestrator using PostgreSQL - demonstrates swappable DB adapters</description>
+
+    <dependencies>
+        <!-- ONLY 2 INTERNAL JAR DEPENDENCIES AS REQUIRED -->
+        
+        <!-- Core Adapter JAR - Contains Spring Boot web framework and core business logic -->
+        <dependency>
+            <groupId>com.orchestrator</groupId>
+            <artifactId>orchestrator-core-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- PostgreSQL Adapter JAR - Contains ONLY PostgreSQL-specific code and dependencies -->
+        <dependency>
+            <groupId>com.orchestrator</groupId>
+            <artifactId>orchestrator-postgres-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- Testing Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.orchestrator.inventory.InventoryOrchestratorApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

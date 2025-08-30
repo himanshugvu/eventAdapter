@@ -1,0 +1,70 @@
+# Production-ready Payment Orchestrator Configuration
+# Demonstrates mandatory configuration with separate bootstrap servers
+
+orchestrator:
+  # MANDATORY: Consumer configuration
+  consumer:
+    topic: payment-input-topic
+    group-id: payment-orchestrator-group
+    bootstrap-servers: localhost:9092  # Can be different from producer
+    
+  # MANDATORY: Producer configuration  
+  producer:
+    topic: payment-output-topic
+    bootstrap-servers: localhost:9092  # Can be different from consumer
+    
+  # MANDATORY: Database configuration
+  database:
+    strategy: RELIABLE  # OUTBOX, RELIABLE, or LIGHTWEIGHT
+
+# MongoDB Configuration
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/payment-orchestrator
+      database: payment-orchestrator
+  
+  # Application Configuration
+  application:
+    name: payment-orchestrator
+    
+  # Server Configuration
+  server:
+    port: 8080
+    
+# Kafka Configuration Overrides (optional - best defaults are in core adapter)
+spring.kafka:
+  consumer:
+    heartbeat-interval: 3s
+    session-timeout: 10s
+    max-poll-records: 500
+    fetch-max-wait: 500ms
+    auto-offset-reset: earliest
+    enable-auto-commit: false
+  
+  producer:
+    retries: 3
+    batch-size: 16384
+    linger-ms: 1
+    buffer-memory: 33554432
+    compression-type: snappy
+    acks: all
+
+# Logging Configuration
+logging:
+  level:
+    com.orchestrator: INFO
+    org.apache.kafka: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true

@@ -6,21 +6,33 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="payments-orchestrator-mongo-example" />
-        <module name="payments-orchestrator-example" />
-        <module name="orchestrator-db-postgres" />
-        <module name="orchestrator-core" />
-        <module name="orchestrator-db-mongo" />
+        <module name="payment-orch-example" />
+        <module name="orchestrator-mongo-adapter" />
+        <module name="orchestrator-postgres-adapter" />
         <module name="kafka-load-generator" />
+        <module name="orchestrator-core-adapter" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="orchestrator-core" target="21" />
+      <module name="orchestrator-db-adapter" target="21" />
+      <module name="orchestrator-db-mongo" target="21" />
+      <module name="orchestrator-db-postgres" target="21" />
+      <module name="payments-orchestrator-example" target="21" />
+      <module name="payments-orchestrator-mongo-example" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="kafka-load-generator" options="-parameters" />
       <module name="orchestrator-core" options="-parameters" />
+      <module name="orchestrator-core-adapter" options="-parameters" />
+      <module name="orchestrator-db-adapter" options="-parameters" />
       <module name="orchestrator-db-mongo" options="-parameters" />
       <module name="orchestrator-db-postgres" options="-parameters" />
+      <module name="orchestrator-mongo-adapter" options="-parameters" />
+      <module name="orchestrator-postgres-adapter" options="-parameters" />
+      <module name="payment-orch-example" options="-parameters" />
       <module name="payments-orchestrator-example" options="-parameters" />
       <module name="payments-orchestrator-mongo-example" options="-parameters" />
     </option>

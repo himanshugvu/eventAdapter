@@ -28,11 +28,10 @@
     </properties>
 
     <modules>
-        <module>orchestrator-core</module>
-        <module>orchestrator-db-mongo</module>
-        <module>orchestrator-db-postgres</module>
-        <module>payments-orchestrator-example</module>
-        <module>payments-orchestrator-mongo-example</module>
+        <module>orchestrator-core-adapter</module>
+        <module>orchestrator-mongo-adapter</module>
+        <module>orchestrator-postgres-adapter</module>
+        <module>payment-orch-example</module>
         <module>load-test</module>
     </modules>
 

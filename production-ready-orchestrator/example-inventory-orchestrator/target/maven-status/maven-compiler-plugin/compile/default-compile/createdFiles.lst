@@ -1,0 +1,2 @@
+com\orchestrator\example\inventory\InventoryOrchestratorApplication.class
+com\orchestrator\example\inventory\transformer\InventoryMessageTransformer.class

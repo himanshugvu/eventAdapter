@@ -1,0 +1,41 @@
+{
+  "groups": [
+    {
+      "name": "orchestrator",
+      "type": "com.orchestrator.core.config.OrchestratorProperties",
+      "sourceType": "com.orchestrator.core.config.OrchestratorProperties"
+    },
+    {
+      "name": "orchestrator.consumer",
+      "type": "com.orchestrator.core.config.OrchestratorProperties$ConsumerConfig",
+      "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
+      "sourceMethod": "consumer()"
+    },
+    {
+      "name": "orchestrator.database",
+      "type": "com.orchestrator.core.config.OrchestratorProperties$DatabaseConfig",
+      "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
+      "sourceMethod": "database()"
+    },
+    {
+      "name": "orchestrator.monitoring",
+      "type": "com.orchestrator.core.config.OrchestratorProperties$MonitoringConfig",
+      "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
+      "sourceMethod": "monitoring()"
+    },
+    {
+      "name": "orchestrator.producer",
+      "type": "com.orchestrator.core.config.OrchestratorProperties$ProducerConfig",
+      "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
+      "sourceMethod": "producer()"
+    },
+    {
+      "name": "orchestrator.resilience",
+      "type": "com.orchestrator.core.config.OrchestratorProperties$ResilienceConfig",
+      "sourceType": "com.orchestrator.core.config.OrchestratorProperties",
+      "sourceMethod": "resilience()"
+    }
+  ],
+  "properties": [],
+  "hints": []
+}

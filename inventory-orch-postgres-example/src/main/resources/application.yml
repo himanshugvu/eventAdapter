@@ -1,0 +1,44 @@
+# Inventory Orchestrator Configuration - PostgreSQL Version
+
+orchestrator:
+  # MANDATORY: Consumer configuration
+  consumer:
+    topic: inventory-input-topic
+    group-id: inventory-orchestrator-group
+    bootstrap-servers: localhost:9092
+    
+  # MANDATORY: Producer configuration  
+  producer:
+    topic: inventory-output-topic
+    bootstrap-servers: localhost:9092
+    
+  # MANDATORY: Database configuration
+  database:
+    strategy: OUTBOX  # Different strategy than payment orchestrator
+
+# PostgreSQL Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/inventory_orchestrator
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  
+  # Application Configuration
+  application:
+    name: inventory-orchestrator
+    
+  # Server Configuration (different port to avoid conflicts)
+  server:
+    port: 8081
+
+# Logging Configuration
+logging:
+  level:
+    com.orchestrator: INFO
+    org.postgresql: WARN
