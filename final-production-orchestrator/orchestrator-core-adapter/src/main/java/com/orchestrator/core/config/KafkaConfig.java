@@ -31,7 +31,6 @@ public class KafkaConfig {
     public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
         
-        // Use producer-specific bootstrap servers if provided, otherwise fall back to consumer bootstrap servers
         String bootstrapServers = properties.producer().bootstrapServers() != null 
             ? properties.producer().bootstrapServers() 
             : properties.consumer().bootstrapServers();
@@ -44,7 +43,6 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, (int) properties.producer().requestTimeout().toMillis());
         configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, properties.producer().enableIdempotence());
         
-        // High-performance optimizations
         configProps.put(ProducerConfig.BATCH_SIZE_CONFIG, properties.producer().batchSize());
         configProps.put(ProducerConfig.LINGER_MS_CONFIG, properties.producer().lingerMs().toMillis());
         configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, properties.producer().compressionType());
@@ -52,7 +50,6 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, properties.producer().maxInFlightRequestsPerConnection());
         configProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, (int) properties.producer().deliveryTimeout().toMillis());
         
-        // Only set transactional ID if idempotence is enabled
         if (properties.producer().enableIdempotence()) {
             configProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, properties.producer().transactionIdPrefix());
         }
@@ -83,10 +80,7 @@ public class KafkaConfig {
         configProps.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, StringDeserializer.class);
         configProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, properties.consumer().maxPollRecords());
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, properties.consumer().enableAutoCommit());
-        configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        configProps.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, "read_committed");
         
-        // High-performance consumer optimizations
         configProps.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, properties.consumer().fetchMinBytes());
         configProps.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, properties.consumer().fetchMaxWait().toMillis());
         configProps.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, properties.consumer().maxPartitionFetchBytes());
@@ -103,7 +97,7 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         factory.setConcurrency(properties.consumer().concurrency());
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.BATCH);
         factory.getContainerProperties().setPollTimeout(properties.consumer().pollTimeout().toMillis());
         
         return factory;

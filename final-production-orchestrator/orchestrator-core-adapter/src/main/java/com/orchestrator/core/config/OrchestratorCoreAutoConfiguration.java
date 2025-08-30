@@ -9,22 +9,22 @@ import com.orchestrator.core.transformer.DefaultMessageTransformer;
 import com.orchestrator.core.transformer.MessageTransformer;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-/**
- * Auto-configuration for the Orchestrator Core Adapter
- * Provides all core services and configurations needed for event orchestration
- */
 @AutoConfiguration
 @EnableConfigurationProperties(OrchestratorProperties.class)
 @EnableRetry
 @EnableScheduling
+@ComponentScan(basePackages = "com.orchestrator")
+@ConditionalOnClass(EventStore.class)
 @Import({KafkaConfig.class})
 public class OrchestratorCoreAutoConfiguration {
     

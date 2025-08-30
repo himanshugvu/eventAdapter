@@ -19,9 +19,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * High-performance event consumer with comprehensive latency tracking
- */
 @Service
 public class EventConsumerService {
     
@@ -57,7 +54,6 @@ public class EventConsumerService {
         
         Instant receivedAt = Instant.now();
         
-        // Extract timing headers
         Long sendTimestampNs = extractSendTimestamp(record);
         String messageId = extractMessageId(record);
         String source = extractSource(record);
@@ -65,7 +61,6 @@ public class EventConsumerService {
         logger.info("CONSUMER RECEIVED: messageId={}, source={}, topic={}, partition={}, offset={}, receivedAt={}", 
                    messageId, source, record.topic(), record.partition(), record.offset(), receivedAt);
         
-        // Log consumer latency
         if (sendTimestampNs != null && sendTimestampNs > 0) {
             latencyTracker.recordConsumerLatency(sendTimestampNs, receivedAt);
         }
@@ -135,7 +130,6 @@ public class EventConsumerService {
         String topicPartition = record.topic() + "-" + record.partition();
         Event event = new Event(eventId, record.value(), topicPartition, record.offset());
         
-        // Set timing information
         event.setSendTimestampNs(sendTimestampNs);
         event.setReceivedAtOrchestrator(receivedAt);
         

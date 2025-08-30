@@ -8,9 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * REST controller exposing orchestrator metrics and statistics
- */
 @RestController
 @RequestMapping("/api/metrics")
 public class MetricsController {
@@ -29,7 +26,6 @@ public class MetricsController {
         long slowMessages = latencyTracker.getSlowMessageCount();
         double slowPercentage = latencyTracker.getSlowMessagePercentage();
         
-        // Log periodic stats when endpoint is called
         latencyTracker.logPeriodicStats();
         
         return Map.of(

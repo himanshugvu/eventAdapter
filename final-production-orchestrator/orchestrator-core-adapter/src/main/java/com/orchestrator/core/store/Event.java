@@ -3,10 +3,6 @@ package com.orchestrator.core.store;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * Core event entity representing a message in the orchestrator pipeline.
- * Contains comprehensive timing metrics for latency tracking.
- */
 public class Event {
     
     private String id;
@@ -14,7 +10,6 @@ public class Event {
     private String sourceTopicPartition;
     private Long offset;
     
-    // Additional fields for compatibility
     private Instant receivedAt;
     private String topicPartition;
     private Long offsetValue;
@@ -27,7 +22,6 @@ public class Event {
     private String errorMessage;
     private int retryCount;
     
-    // Timing metrics for latency tracking
     private Long sendTimestampNs;           // Original send timestamp from load test
     private Instant receivedAtOrchestrator; // When message arrived at orchestrator
     private Instant processedAt;            // When message processing completed
@@ -51,7 +45,6 @@ public class Event {
         this.retryCount = 0;
     }
     
-    // Basic getters and setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
@@ -87,7 +80,6 @@ public class Event {
         this.updatedAt = Instant.now();
     }
     
-    // Getters and setters for timing metrics
     public Long getSendTimestampNs() { return sendTimestampNs; }
     public void setSendTimestampNs(Long sendTimestampNs) { this.sendTimestampNs = sendTimestampNs; }
     
@@ -106,7 +98,6 @@ public class Event {
     public Boolean getExceededOneSecond() { return exceededOneSecond; }
     public void setExceededOneSecond(Boolean exceededOneSecond) { this.exceededOneSecond = exceededOneSecond; }
     
-    // Additional compatibility getters and setters
     public Instant getReceivedAt() { return receivedAt; }
     public void setReceivedAt(Instant receivedAt) { this.receivedAt = receivedAt; }
     
@@ -125,9 +116,6 @@ public class Event {
     public Long getPublishingLatencyMs() { return publishingLatencyMs; }
     public void setPublishingLatencyMs(Long publishingLatencyMs) { this.publishingLatencyMs = publishingLatencyMs; }
     
-    /**
-     * Helper method to calculate and set timing metrics
-     */
     public void calculateTimingMetrics() {
         if (sendTimestampNs != null && publishedAt != null) {
             long sendTimeMs = sendTimestampNs / 1_000_000; // Convert nanoseconds to milliseconds
