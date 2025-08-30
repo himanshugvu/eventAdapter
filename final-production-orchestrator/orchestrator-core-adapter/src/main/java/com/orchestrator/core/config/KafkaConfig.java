@@ -80,7 +80,6 @@ public class KafkaConfig {
         configProps.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, StringDeserializer.class);
         configProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, properties.consumer().maxPollRecords());
         configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, properties.consumer().enableAutoCommit());
-        
         configProps.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, properties.consumer().fetchMinBytes());
         configProps.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, properties.consumer().fetchMaxWait().toMillis());
         configProps.put(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, properties.consumer().maxPartitionFetchBytes());

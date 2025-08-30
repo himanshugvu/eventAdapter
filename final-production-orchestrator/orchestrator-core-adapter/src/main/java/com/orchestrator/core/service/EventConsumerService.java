@@ -129,10 +129,8 @@ public class EventConsumerService {
         String eventId = UUID.randomUUID().toString();
         String topicPartition = record.topic() + "-" + record.partition();
         Event event = new Event(eventId, record.value(), topicPartition, record.offset());
-        
         event.setSendTimestampNs(sendTimestampNs);
         event.setReceivedAtOrchestrator(receivedAt);
-        
         return event;
     }
     
