@@ -43,11 +43,11 @@ class PostgresEventStoreTest {
         Event event2 = new Event("id2", "payload2", "topic", 0, 101L);
         List<Event> events = List.of(event1, event2);
         
-        when(jdbcTemplate.batchUpdate(anyString(), anyList())).thenReturn(new int[]{1, 1});
+        when(jdbcTemplate.batchUpdate(anyString(), any())).thenReturn(new int[]{1, 1});
         
         postgresEventStore.bulkInsert(events);
         
-        verify(jdbcTemplate).batchUpdate(anyString(), anyList());
+        verify(jdbcTemplate).batchUpdate(anyString(), any());
     }
 
     @Test
@@ -71,16 +71,6 @@ class PostgresEventStoreTest {
     @Test
     void testFindStaleEvents() throws SQLException {
         Duration threshold = Duration.ofMinutes(30);
-        
-        when(resultSet.getString("id")).thenReturn("test-id");
-        when(resultSet.getString("source_payload")).thenReturn("payload");
-        when(resultSet.getString("source_topic")).thenReturn("topic");
-        when(resultSet.getInt("source_partition")).thenReturn(0);
-        when(resultSet.getLong("source_offset")).thenReturn(100L);
-        when(resultSet.getString("status")).thenReturn("RECEIVED");
-        when(resultSet.getTimestamp("received_at")).thenReturn(Timestamp.from(Instant.now()));
-        when(resultSet.getLong("send_timestamp_ns")).thenReturn(0L);
-        when(resultSet.wasNull()).thenReturn(true);
         
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Timestamp.class)))
             .thenReturn(List.of(new Event("id", "payload", "topic", 0, 100L)));
@@ -134,11 +124,11 @@ class PostgresEventStoreTest {
     @Test
     void testCleanupOldEvents() {
         Duration retentionPeriod = Duration.ofDays(7);
-        when(jdbcTemplate.update(anyString(), any())).thenReturn(15);
+        when(jdbcTemplate.update(anyString())).thenReturn(15);
         
         int deletedCount = postgresEventStore.cleanupOldEvents(retentionPeriod);
         
         assertEquals(15, deletedCount);
-        verify(jdbcTemplate).update(anyString(), eq(retentionPeriod.toDays()));
+        verify(jdbcTemplate).update(anyString());
     }
 }

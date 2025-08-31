@@ -2,6 +2,7 @@ package com.orchestrator.core.metrics;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.Clock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +13,7 @@ import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class LatencyTrackerTest {
@@ -25,10 +27,18 @@ class LatencyTrackerTest {
     @Mock
     private Timer.Sample sample;
     
+    @Mock
+    private MeterRegistry.Config config;
+    
+    @Mock 
+    private Clock clock;
+    
     private LatencyTracker latencyTracker;
 
     @BeforeEach
     void setUp() {
+        when(meterRegistry.config()).thenReturn(config);
+        when(config.clock()).thenReturn(clock);
         when(meterRegistry.timer(anyString())).thenReturn(timer);
         when(meterRegistry.counter(anyString())).thenReturn(mock(io.micrometer.core.instrument.Counter.class));
         when(Timer.start(meterRegistry)).thenReturn(sample);

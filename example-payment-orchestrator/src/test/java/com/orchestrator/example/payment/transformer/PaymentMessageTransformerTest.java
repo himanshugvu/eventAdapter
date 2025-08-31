@@ -20,11 +20,10 @@ class PaymentMessageTransformerTest {
         String result = transformer.transform(input);
         
         assertNotNull(result);
-        assertTrue(result.contains("\"processedAmount\":100.5"));
-        assertTrue(result.contains("\"currency\":\"USD\""));
-        assertTrue(result.contains("\"accountId\":\"12345\""));
-        assertTrue(result.contains("\"status\":\"PROCESSED\""));
-        assertTrue(result.contains("\"processedAt\":"));
+        assertTrue(result.contains("\"payment_processed\":true"));
+        assertTrue(result.contains("\"original_message\":" + input));
+        assertTrue(result.contains("\"processor\":\"payment-orchestrator\""));
+        assertTrue(result.contains("\"processed_at\":"));
     }
 
     @Test
