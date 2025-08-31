@@ -39,9 +39,10 @@ class LatencyTrackerTest {
     void setUp() {
         when(meterRegistry.config()).thenReturn(config);
         when(config.clock()).thenReturn(clock);
+        when(clock.monotonicTime()).thenReturn(System.nanoTime());
         when(meterRegistry.timer(anyString())).thenReturn(timer);
         when(meterRegistry.counter(anyString())).thenReturn(mock(io.micrometer.core.instrument.Counter.class));
-        when(Timer.start(meterRegistry)).thenReturn(sample);
+        lenient().when(Timer.start(meterRegistry)).thenReturn(sample);
         latencyTracker = new LatencyTracker(meterRegistry);
     }
 

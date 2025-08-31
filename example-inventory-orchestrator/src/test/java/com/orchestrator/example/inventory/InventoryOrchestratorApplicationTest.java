@@ -10,7 +10,5 @@ class InventoryOrchestratorApplicationTest {
 
     @Test
     void contextLoads() {
-        // This test ensures that the Spring application context loads correctly
-        // with all beans properly configured and no circular dependencies
     }
 }
